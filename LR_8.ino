@@ -3,7 +3,7 @@
 const int DIRECTION_PIN = 2;
 const int STOP_PIN = A0;
 
-const int MOTOR_SPEED = 100;
+const int MOTOR_SPEED = 125;
 const int MOTOR_COUNT = 4;
 
 AF_DCMotor motors[MOTOR_COUNT] = {AF_DCMotor(1), AF_DCMotor(2), AF_DCMotor(3), AF_DCMotor(4)};
