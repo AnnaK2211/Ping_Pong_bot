@@ -5,34 +5,84 @@ const int STOP_PIN = A0;
 
 const int MOTOR_SPEED = 100;
 const int MOTOR_COUNT = 4;
+const int ACCEL_DECEL_TIME = 1000;
 
 AF_DCMotor motors[MOTOR_COUNT] = {AF_DCMotor(1), AF_DCMotor(2), AF_DCMotor(3), AF_DCMotor(4)};
 
-void runMotors(int direction) {
+enum Direction {
+  AHEAD,
+  BACK,
+  STOP
+};
+
+Direction directionState = STOP;
+Direction previousDirectionState = STOP;
+
+void setMotorsSpeed(int speed) {
   for (int i = 0; i < MOTOR_COUNT; i++) {
-    motors[i].run(direction);
+    motors[i].setSpeed(speed);
+  }
+}
+
+void runMotors(Direction state) {
+  for (int i = 0; i < MOTOR_COUNT; i++) {
+    switch (state) {
+      case STOP:
+        motors[i].run(RELEASE);
+        break;
+      case AHEAD:
+        motors[i].run(FORWARD);
+        break;
+      case BACK:
+        motors[i].run(BACKWARD);
+        break;
+    }
+  }
+}
+
+void brake() {
+  for (int i = MOTOR_SPEED; i >= 0; i--) {
+    setMotorsSpeed(i);
+    delay(ACCEL_DECEL_TIME / MOTOR_SPEED);
+  }
+  runMotors(STOP);
+}
+
+void accelerate(Direction newDirection) {
+  runMotors(newDirection);
+  for (int i = 0; i <= MOTOR_SPEED; i++) {
+    setMotorsSpeed(i);
+    delay(ACCEL_DECEL_TIME / MOTOR_SPEED);
   }
 }
 
 void setup() {
-  for (int i = 0; i < MOTOR_COUNT; i++) {
-    motors[i].setSpeed(MOTOR_SPEED);
-    motors[i].run(RELEASE);
-  }
+  pinMode(DIRECTION_PIN, INPUT_PULLUP);
+  pinMode(STOP_PIN, INPUT_PULLUP);
 
-  pinMode(DIRECTION_PIN, INPUT);
-  pinMode(STOP_PIN, INPUT);
+  setMotorsSpeed(0);
+  runMotors(STOP);
 }
 
 void loop() {
   if (digitalRead(STOP_PIN) == HIGH) {
-    runMotors(RELEASE);
-  } 
-  else {
-    if (digitalRead(DIRECTION_PIN) == HIGH) {
-      runMotors(FORWARD);
-    } else {
-      runMotors(BACKWARD);
+    directionState = STOP;
+  } else {
+    directionState = (digitalRead(DIRECTION_PIN) == HIGH) ? AHEAD : BACK;
+  }
+
+  if (directionState != previousDirectionState) {
+    if (directionState == STOP) {
+      brake();
+    }
+    else if (previousDirectionState == STOP) {
+      accelerate(directionState);
+    }
+    else {
+      brake();
+      accelerate(directionState);
     }
   }
+
+  previousDirectionState = directionState;
 }
