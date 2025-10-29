@@ -40,19 +40,33 @@ void runMotors(Direction state) {
   }
 }
 
-void brake() {
-  for (int i = MOTOR_SPEED; i >= 0; i--) {
-    setMotorsSpeed(i);
-    delay(ACCEL_DECEL_TIME / MOTOR_SPEED);
+void brake(int duration) {
+  unsigned long startTime = millis();
+  int currentSpeed = MOTOR_SPEED;
+  
+  while (currentSpeed >= 0) {
+    setMotorsSpeed(currentSpeed);
+    unsigned long currentTime = millis();
+    if (currentTime - startTime >= duration / MOTOR_SPEED) {
+      currentSpeed--;
+      startTime = currentTime;
+    }
   }
   runMotors(STOP);
 }
 
-void accelerate(Direction newDirection) {
+void accelerate(Direction newDirection, int duration) {
   runMotors(newDirection);
-  for (int i = 0; i <= MOTOR_SPEED; i++) {
-    setMotorsSpeed(i);
-    delay(ACCEL_DECEL_TIME / MOTOR_SPEED);
+  unsigned long startTime = millis();
+  int currentSpeed = 0;
+  
+  while (currentSpeed <= MOTOR_SPEED) {
+    setMotorsSpeed(currentSpeed);
+    unsigned long currentTime = millis();
+    if (currentTime - startTime >= duration / MOTOR_SPEED) {
+      currentSpeed++;
+      startTime = currentTime;
+    }
   }
 }
 
@@ -60,27 +74,28 @@ void setup() {
   pinMode(DIRECTION_PIN, INPUT_PULLUP);
   pinMode(STOP_PIN, INPUT_PULLUP);
 
-  setMotorsSpeed(0);
+  setMotorsSpeed(MOTOR_SPEED);
   runMotors(STOP);
 }
 
 void loop() {
   if (digitalRead(STOP_PIN) == HIGH) {
     directionState = STOP;
-  } else {
-    directionState = (digitalRead(DIRECTION_PIN) == HIGH) ? AHEAD : BACK;
+  } 
+  else {
+    directionState = digitalRead(DIRECTION_PIN) == HIGH ? AHEAD : BACK;
   }
 
   if (directionState != previousDirectionState) {
     if (directionState == STOP) {
-      brake();
+      brake(ACCEL_DECEL_TIME);
     }
     else if (previousDirectionState == STOP) {
-      accelerate(directionState);
+      accelerate(directionState, ACCEL_DECEL_TIME);
     }
     else {
-      brake();
-      accelerate(directionState);
+      brake(ACCEL_DECEL_TIME);
+      accelerate(directionState, ACCEL_DECEL_TIME);
     }
   }
 
