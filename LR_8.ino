@@ -18,6 +18,26 @@ enum Direction {
 Direction directionState = STOP;
 Direction previousDirectionState = STOP;
 
+class Timer {
+  private:
+    unsigned long duration;
+    unsigned long timerStart;
+
+  public:
+    Timer(unsigned long timerDuration) {
+      duration = timerDuration;
+      timerStart = 0;
+    }
+
+    void restart() {
+      timerStart = millis();
+    }
+
+    bool isElapsed() {
+      return millis() - timerStart >= duration;
+    }
+};
+
 void setMotorsSpeed(int speed) {
   for (int i = 0; i < MOTOR_COUNT; i++) {
     motors[i].setSpeed(speed);
@@ -41,31 +61,31 @@ void runMotors(Direction state) {
 }
 
 void brake(int duration) {
-  unsigned long startTime = millis();
-  int currentSpeed = MOTOR_SPEED;
+  Timer timer(duration / MOTOR_SPEED);
+  timer.restart();
   
-  while (currentSpeed >= 0) {
+  for (int currentSpeed = MOTOR_SPEED; currentSpeed >= 0; ) {
     setMotorsSpeed(currentSpeed);
-    unsigned long currentTime = millis();
-    if (currentTime - startTime >= duration / MOTOR_SPEED) {
+    if (timer.isElapsed()) {
       currentSpeed--;
-      startTime = currentTime;
+      timer.restart();
     }
   }
+
   runMotors(STOP);
 }
 
 void accelerate(Direction newDirection, int duration) {
   runMotors(newDirection);
-  unsigned long startTime = millis();
-  int currentSpeed = 0;
+
+  Timer timer(duration / MOTOR_SPEED);
+  timer.restart();
   
-  while (currentSpeed <= MOTOR_SPEED) {
+  for (int currentSpeed = 0; currentSpeed <= MOTOR_SPEED; ) {
     setMotorsSpeed(currentSpeed);
-    unsigned long currentTime = millis();
-    if (currentTime - startTime >= duration / MOTOR_SPEED) {
+    if (timer.isElapsed()) {
       currentSpeed++;
-      startTime = currentTime;
+      timer.restart();
     }
   }
 }
