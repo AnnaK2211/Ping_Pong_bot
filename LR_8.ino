@@ -4,25 +4,11 @@ const int DIRECTION_PIN = 2;
 const int STOP_PIN = A0;
 
 const int MOTOR_SPEED = 100;
+const int BASE_MOTOR_TURNING_SPEED = 190;
 const int MOTOR_COUNT = 4;
 const int ACCEL_DECEL_TIME = 1000;
-
 const int STOP_WAIT_TIME = 3000;
-const int LEFT_RIGHT_MOVE_TIME = 750;
-
-AF_DCMotor motors[MOTOR_COUNT] = {AF_DCMotor(1), AF_DCMotor(2), AF_DCMotor(3), AF_DCMotor(4)};
-
-enum Direction {
-  AHEAD,
-  BACK,
-  LEFT,
-  RIGHT,
-  STOP
-};
-
-Direction directionState = STOP;
-Direction previousDirectionState = STOP;
-Direction randomDirectionState = STOP;
+const int TURN_90_TIME = 800;
 
 class Timer {
   private:
@@ -52,8 +38,25 @@ class Timer {
     }
 };
 
+AF_DCMotor motors[MOTOR_COUNT] = {AF_DCMotor(1), AF_DCMotor(2), AF_DCMotor(3), AF_DCMotor(4)};
+
+enum Direction {
+  AHEAD,
+  BACK,
+  LEFT,
+  RIGHT,
+  STOP
+};
+
+Direction directionState = STOP;
+Direction previousDirectionState = STOP;
+Direction randomDirectionState = STOP;
+
 Timer stopWaitTimer(STOP_WAIT_TIME);
-Timer leftRightMoveTimer(LEFT_RIGHT_MOVE_TIME);
+
+const int MOTOR_TURNING_SPEED = 190;
+unsigned long turnTime = (unsigned long)TURN_90_TIME * BASE_MOTOR_TURNING_SPEED / MOTOR_TURNING_SPEED;
+Timer leftRightMoveTimer(turnTime);
 
 void setMotorsSpeed(int speed) {
   for (int i = 0; i < MOTOR_COUNT; i++) {
@@ -62,6 +65,14 @@ void setMotorsSpeed(int speed) {
 }
 
 void runMotors(Direction state) {
+  auto getTurnDirection = [](Direction turn, int motorIndex) {
+    bool isLeftSide = motorIndex < (MOTOR_COUNT / 2);
+
+    if (turn == LEFT)
+      return isLeftSide ? BACKWARD : FORWARD;
+    return isLeftSide ? FORWARD : BACKWARD;
+  };
+
   for (int i = 0; i < MOTOR_COUNT; i++) {
     switch (state) {
       case STOP:
@@ -74,10 +85,12 @@ void runMotors(Direction state) {
         motors[i].run(BACKWARD);
         break;
       case LEFT:
-        motors[i].run((i < (MOTOR_COUNT / 2)) ? BACKWARD : FORWARD);
+        //motors[i].run((i < (MOTOR_COUNT / 2)) ? BACKWARD : FORWARD);
+        motors[i].run(getTurnDirection(state, i));
         break;
       case RIGHT:
-        motors[i].run((i < (MOTOR_COUNT / 2)) ? FORWARD : BACKWARD);
+        //motors[i].run((i < (MOTOR_COUNT / 2)) ? FORWARD : BACKWARD);
+        motors[i].run(getTurnDirection(state, i));
         break;
     }
   }
@@ -125,7 +138,7 @@ void setup() {
 
 void loop() {
   if (randomDirectionState != STOP) {
-    setMotorsSpeed(200);
+    setMotorsSpeed(MOTOR_TURNING_SPEED);
     runMotors(randomDirectionState);
 
     if (leftRightMoveTimer.isElapsed()) {
@@ -156,9 +169,9 @@ void loop() {
     previousDirectionState = directionState;
 
     if (directionState == STOP && randomDirectionState == STOP) {
-        if (!stopWaitTimer.isRunning()) {
-          stopWaitTimer.restart();
-        }
+      if (!stopWaitTimer.isRunning()) {
+        stopWaitTimer.restart();
+      }
 
       if (stopWaitTimer.isElapsed()) {
         stopWaitTimer.stop();
