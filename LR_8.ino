@@ -65,14 +65,6 @@ void setMotorsSpeed(int speed) {
 }
 
 void runMotors(Direction state) {
-  auto getTurnDirection = [](Direction turn, int motorIndex) {
-    bool isLeftSide = motorIndex < (MOTOR_COUNT / 2);
-
-    if (turn == LEFT)
-      return isLeftSide ? BACKWARD : FORWARD;
-    return isLeftSide ? FORWARD : BACKWARD;
-  };
-
   for (int i = 0; i < MOTOR_COUNT; i++) {
     switch (state) {
       case STOP:
@@ -85,12 +77,10 @@ void runMotors(Direction state) {
         motors[i].run(BACKWARD);
         break;
       case LEFT:
-        //motors[i].run((i < (MOTOR_COUNT / 2)) ? BACKWARD : FORWARD);
-        motors[i].run(getTurnDirection(state, i));
+        motors[i].run((i < (MOTOR_COUNT / 2)) ? BACKWARD : FORWARD);
         break;
       case RIGHT:
-        //motors[i].run((i < (MOTOR_COUNT / 2)) ? FORWARD : BACKWARD);
-        motors[i].run(getTurnDirection(state, i));
+        motors[i].run((i < (MOTOR_COUNT / 2)) ? FORWARD : BACKWARD);
         break;
     }
   }
@@ -126,6 +116,53 @@ void accelerate(Direction newDirection, int duration) {
   }
 }
 
+void doRandomTurn() {
+  if (randomDirectionState != STOP) {
+    setMotorsSpeed(MOTOR_TURNING_SPEED);
+    runMotors(randomDirectionState);
+
+    if (leftRightMoveTimer.isElapsed()) {
+      randomDirectionState = STOP;
+      runMotors(STOP);
+    }
+  } 
+  else if (directionState == STOP) {
+    if (!stopWaitTimer.isRunning()) {
+      stopWaitTimer.restart();
+    }
+
+    if (stopWaitTimer.isElapsed()) {
+      stopWaitTimer.stop();
+      randomDirectionState = random(LEFT, STOP);
+      leftRightMoveTimer.restart();
+    }
+  }
+}
+
+void updatePingPongMotion() {
+  if (digitalRead(STOP_PIN) == HIGH) {
+    directionState = STOP;
+  } 
+  else {
+    directionState = digitalRead(DIRECTION_PIN) == HIGH ? AHEAD : BACK;
+  }
+
+  if (directionState != previousDirectionState) {
+    if (directionState == STOP) {
+      brake(ACCEL_DECEL_TIME);
+    }
+    else if (previousDirectionState == STOP) {
+      accelerate(directionState, ACCEL_DECEL_TIME);
+    }
+    else {
+      brake(ACCEL_DECEL_TIME);
+      accelerate(directionState, ACCEL_DECEL_TIME);
+    }
+  }
+
+  previousDirectionState = directionState;
+}
+
 void setup() {
   pinMode(DIRECTION_PIN, INPUT);
   pinMode(STOP_PIN, INPUT);
@@ -138,47 +175,10 @@ void setup() {
 
 void loop() {
   if (randomDirectionState != STOP) {
-    setMotorsSpeed(MOTOR_TURNING_SPEED);
-    runMotors(randomDirectionState);
-
-    if (leftRightMoveTimer.isElapsed()) {
-      randomDirectionState = STOP;
-    }
-  }
+    doRandomTurn();
+  } 
   else {
-    if (digitalRead(STOP_PIN) == HIGH) {
-      directionState = STOP;
-    } 
-    else {
-      directionState = digitalRead(DIRECTION_PIN) == HIGH ? AHEAD : BACK;
-    }
-
-    if (directionState != previousDirectionState) {
-      if (directionState == STOP) {
-        brake(ACCEL_DECEL_TIME);
-      }
-      else if (previousDirectionState == STOP) {
-        accelerate(directionState, ACCEL_DECEL_TIME);
-      }
-      else {
-        brake(ACCEL_DECEL_TIME);
-        accelerate(directionState, ACCEL_DECEL_TIME);
-      }
-    }
-
-    previousDirectionState = directionState;
-
-    if (directionState == STOP && randomDirectionState == STOP) {
-      if (!stopWaitTimer.isRunning()) {
-        stopWaitTimer.restart();
-      }
-
-      if (stopWaitTimer.isElapsed()) {
-        stopWaitTimer.stop();
-        randomDirectionState = random(LEFT, STOP);
-
-        leftRightMoveTimer.restart();
-      }
-    }
+    updatePingPongMotion();
+    doRandomTurn();
   }
 }
