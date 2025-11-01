@@ -8,7 +8,7 @@ const int MOTOR_COUNT = 4;
 const int ACCEL_DECEL_TIME = 1000;
 
 const int STOP_WAIT_TIME = 3000;
-const int LEFT_RIGHT_MOVE_TIME = 10000;
+const int LEFT_RIGHT_MOVE_TIME = 750;
 
 AF_DCMotor motors[MOTOR_COUNT] = {AF_DCMotor(1), AF_DCMotor(2), AF_DCMotor(3), AF_DCMotor(4)};
 
@@ -74,10 +74,10 @@ void runMotors(Direction state) {
         motors[i].run(BACKWARD);
         break;
       case LEFT:
-        motors[i].run(i % 2 == 0 ? BACKWARD : FORWARD);
+        motors[i].run((i < (MOTOR_COUNT / 2)) ? BACKWARD : FORWARD);
         break;
       case RIGHT:
-        motors[i].run(i % 2 == 0 ? FORWARD : BACKWARD);
+        motors[i].run((i < (MOTOR_COUNT / 2)) ? FORWARD : BACKWARD);
         break;
     }
   }
