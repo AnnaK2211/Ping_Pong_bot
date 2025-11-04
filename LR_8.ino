@@ -122,6 +122,7 @@ void doRandomTurn() {
     runMotors(randomDirectionState);
 
     if (leftRightMoveTimer.isElapsed()) {
+      leftRightMoveTimer.stop();
       randomDirectionState = STOP;
       runMotors(STOP);
     }
