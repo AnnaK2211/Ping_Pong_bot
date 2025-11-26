@@ -4,11 +4,11 @@ const int DIRECTION_PIN = 2;
 const int STOP_PIN = A0;
 
 const int MOTOR_SPEED = 100;
-const int BASE_MOTOR_TURNING_SPEED = 190;
+const int MOTOR_TURNING_SPEED = 190;
 const int MOTOR_COUNT = 4;
-const int ACCEL_DECEL_TIME = 1000;
-const int STOP_WAIT_TIME = 3000;
-const int TURN_90_TIME = 800;
+const unsigned long ACCEL_DECEL_TIME = 700;
+const unsigned long STOP_WAIT_TIME = 3000;
+const unsigned long TURN_TIME = 800;
 
 class Timer {
   private:
@@ -53,10 +53,7 @@ Direction previousDirectionState = STOP;
 Direction randomDirectionState = STOP;
 
 Timer stopWaitTimer(STOP_WAIT_TIME);
-
-const int MOTOR_TURNING_SPEED = 190;
-unsigned long turnTime = (unsigned long)TURN_90_TIME * BASE_MOTOR_TURNING_SPEED / MOTOR_TURNING_SPEED;
-Timer leftRightMoveTimer(turnTime);
+Timer leftRightMoveTimer(TURN_TIME);
 
 void setMotorsSpeed(int speed) {
   for (int i = 0; i < MOTOR_COUNT; i++) {
@@ -86,10 +83,10 @@ void runMotors(Direction state) {
   }
 }
 
-void brake(int duration) {
+void brake(unsigned long duration) {
   Timer timer(duration / MOTOR_SPEED);
   timer.restart();
-  
+ 
   for (int currentSpeed = MOTOR_SPEED; currentSpeed >= 0; ) {
     setMotorsSpeed(currentSpeed);
     if (timer.isElapsed()) {
@@ -101,12 +98,12 @@ void brake(int duration) {
   runMotors(STOP);
 }
 
-void accelerate(Direction newDirection, int duration) {
+void accelerate(Direction newDirection, unsigned long duration) {
   runMotors(newDirection);
 
   Timer timer(duration / MOTOR_SPEED);
   timer.restart();
-  
+ 
   for (int currentSpeed = 0; currentSpeed <= MOTOR_SPEED; ) {
     setMotorsSpeed(currentSpeed);
     if (timer.isElapsed()) {
@@ -124,9 +121,8 @@ void doRandomTurn() {
     if (leftRightMoveTimer.isElapsed()) {
       leftRightMoveTimer.stop();
       randomDirectionState = STOP;
-      runMotors(STOP);
     }
-  } 
+  }
   else if (directionState == STOP) {
     if (!stopWaitTimer.isRunning()) {
       stopWaitTimer.restart();
@@ -143,7 +139,7 @@ void doRandomTurn() {
 void updatePingPongMotion() {
   if (digitalRead(STOP_PIN) == HIGH) {
     directionState = STOP;
-  } 
+  }
   else {
     directionState = digitalRead(DIRECTION_PIN) == HIGH ? AHEAD : BACK;
   }
@@ -177,7 +173,7 @@ void setup() {
 void loop() {
   if (randomDirectionState != STOP) {
     doRandomTurn();
-  } 
+  }
   else {
     updatePingPongMotion();
     doRandomTurn();
